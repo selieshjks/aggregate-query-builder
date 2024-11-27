@@ -81,94 +81,76 @@ builder.matchIf("ageFilter", "cityFilter", null);
 // Build the pipeline and log it
 const pipeline = builder.build();
 console.log(JSON.stringify(pipeline, null, 2));
-```
 
 ## API Methods
 
-### matchEqual(field, value, isSubPipeline = false)
+### `matchEqual(field, value, subPipelineName)`
 - Adds a `$match` stage for equality condition.
 - **Parameters**:
   - `field`: The field to match.
   - `value`: The value to match against.
-  - `isSubPipeline`: If `true`, the match is added to a sub-pipeline.
-  
-### matchRange(field, operator, value, isSubPipeline = false)
+  - `subPipelineName`: The name of the sub-pipeline. This is a required parameter.
+
+### `matchRange(field, operator, value, subPipelineName)`
 - Adds a `$match` stage for range conditions (e.g., `$gt`, `$lt`).
 - **Parameters**:
   - `field`: The field to match.
   - `operator`: The operator (e.g., `$gt`, `$lt`).
   - `value`: The value to compare.
-  - `isSubPipeline`: If `true`, the match is added to a sub-pipeline.
+  - `subPipelineName`: The name of the sub-pipeline. This is a required parameter.
 
-### matchIf(condition, trueMatch, falseMatch, isSubPipeline = false)
-- Adds a `$match` stage with conditional logic.
+### `matchIf(subPipelineName, conditionKey, trueMatch, falseMatch)`
+- Adds a `$match` stage with conditional logic using sub-pipelines.
 - **Parameters**:
-  - `condition`: The condition to evaluate.
-  - `trueMatch`: The match stage if the condition is `true`.
-  - `falseMatch`: The match stage if the condition is `false`.
-  - `isSubPipeline`: If `true`, the match is added to a sub-pipeline.
+  - `subPipelineName`: The name of the sub-pipeline containing the condition (`trueMatch` and `falseMatch`).
+  - `conditionKey`: The key used to retrieve the condition from the sub-pipeline.
+  - `trueMatch`: The match condition to apply if the condition is `true`.
+  - `falseMatch`: The match condition to apply if the condition is `false`.
 
-### matchSwitch(switchField, cases, isSubPipeline = false)
-- Adds a `$match` stage with a `switch` condition.
+### `matchSwitch(subPipelineName, switchField, cases)`
+- Adds a `$match` stage with a `switch` condition, based on a field and set of cases.
 - **Parameters**:
+  - `subPipelineName`: The name of the sub-pipeline containing the cases.
   - `switchField`: The field to evaluate.
-  - `cases`: The cases for the switch.
-  - `isSubPipeline`: If `true`, the match is added to a sub-pipeline.
+  - `cases`: An array of case objects where each object contains `caseCondition` and `then` condition.
 
-### lookup(fields, isSubPipeline = false)
+### `lookup(fields, subPipelineName)`
 - Adds `$lookup` stages based on Mongoose schema references.
 - **Parameters**:
   - `fields`: The fields to lookup.
-  - `isSubPipeline`: If `true`, the lookup is added to a sub-pipeline.
+  - `subPipelineName`: The name of the sub-pipeline. This is a required parameter.
 
-### unwind(fields, isSubPipeline = false)
+### `unwind(fields, subPipelineName)`
 - Adds `$unwind` stages to deconstruct arrays.
 - **Parameters**:
   - `fields`: The fields to unwind.
-  - `isSubPipeline`: If `true`, the unwind is added to a sub-pipeline.
+  - `subPipelineName`: The name of the sub-pipeline. This is a required parameter.
 
-### group(groupConditions, isSubPipeline = false)
-- Adds a `$group` stage to group documents.
+### `group(groupConditions, subPipelineName)`
+- Adds a `$group` stage to group documents based on conditions.
 - **Parameters**:
   - `groupConditions`: The conditions for grouping.
-  - `isSubPipeline`: If `true`, the group is added to a sub-pipeline.
+  - `subPipelineName`: The name of the sub-pipeline. This is a required parameter.
 
-### project(fields, isSubPipeline = false)
+### `project(fields, subPipelineName)`
 - Adds a `$project` stage to specify fields to include or exclude.
 - **Parameters**:
   - `fields`: The fields to include or exclude.
-  - `isSubPipeline`: If `true`, the project is added to a sub-pipeline.
+  - `subPipelineName`: The name of the sub-pipeline. This is a required parameter.
 
-### sort(sortConditions, isSubPipeline = false)
-- Adds a `$sort` stage to sort documents.
+### `sort(sortConditions, subPipelineName)`
+- Adds a `$sort` stage to sort documents based on specified conditions.
 - **Parameters**:
-  - `sortConditions`: The sort conditions.
-  - `isSubPipeline`: If `true`, the sort is added to a sub-pipeline.
+  - `sortConditions`: The sort conditions (e.g., `{ age: 1 }` for ascending).
+  - `subPipelineName`: The name of the sub-pipeline. This is a required parameter.
 
-### skip(skipValue, isSubPipeline = false)
-- Adds a `$skip` stage for pagination.
+### `appendSubPipeline(subPipelineName)`
+- Appends the sub-pipeline with the specified name to the main pipeline.
 - **Parameters**:
-  - `skipValue`: The number of documents to skip.
-  - `isSubPipeline`: If `true`, the skip is added to a sub-pipeline.
+  - `subPipelineName`: The name of the sub-pipeline to append.
 
-### limit(limitValue, isSubPipeline = false)
-- Adds a `$limit` stage for pagination.
-- **Parameters**:
-  - `limitValue`: The maximum number of documents to return.
-  - `isSubPipeline`: If `true`, the limit is added to a sub-pipeline.
-
-### facet(facets, isSubPipeline = false)
-- Adds a `$facet` stage to run multiple aggregations in parallel.
-- **Parameters**:
-  - `facets`: The facets to include.
-  - `isSubPipeline`: If `true`, the facet is added to a sub-pipeline.
-
-### appendSubPipeline()
-- Appends the sub-pipeline to the main pipeline.
-- Clears the sub-pipeline after appending.
-
-### build()
-- Builds the final aggregation pipeline.
+### `build()`
+- Builds and returns the complete aggregation pipeline, combining all stages and sub-pipelines.
 
 ## Example: Using Sub-Pipelines
 
