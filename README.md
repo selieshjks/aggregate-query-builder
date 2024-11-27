@@ -81,6 +81,7 @@ builder.matchIf("ageFilter", "cityFilter", null);
 // Build the pipeline and log it
 const pipeline = builder.build();
 console.log(JSON.stringify(pipeline, null, 2));
+```
 
 ## API Methods
 
