@@ -1,194 +1,212 @@
+# Aggregate Query Builder for MongoDB
 
-# Aggregate Query Builder
+## Overview
 
-A simple and flexible query builder for MongoDB aggregation using Mongoose. This package provides a fluent interface to build complex aggregation pipelines with support for main and sub-pipelines. It supports various MongoDB stages like `$match`, `$lookup`, `$unwind`, `$group`, and more, with easy-to-use methods for chaining queries.
+**Aggregate Query Builder** is a powerful and flexible library that simplifies the creation of MongoDB aggregation pipelines. With built-in support for sub-pipelines, conditional logic, and automatic handling of Mongoose schema references, it helps developers streamline complex aggregation operations.
+
+Whether you’re working with simple filters or complex queries with multiple conditions, **Aggregate Query Builder** allows you to build, organize, and reuse MongoDB aggregation stages in a clean and readable way.
+
+## Features
+
+- **Sub-pipeline support**: Create sub-pipelines with custom names and reuse them.
+- **Dynamic conditional logic**: Use `matchIf` with sub-pipelines for flexible condition-based queries.
+- **Automatic `$lookup` handling**: Automatically fetch referenced collections based on Mongoose model schema.
+- **Built-in aggregation stages**: Includes support for common aggregation stages like `$match`, `$group`, `$project`, `$sort`, `$facet`, and more.
+- **TypeScript Support**: Full TypeScript support for type safety and autocompletion.
+- **Chained API**: Build aggregation pipelines step by step with a clean and readable API.
 
 ## Installation
 
-To install the package, run the following command:
+To get started, simply install the package from npm:
 
 ```bash
-npm install @selieshjks/aggregate-query-bulder
+npm install @selieshjks/aggregate-query-builder
 ```
 
 ## Usage
 
-### 1. Import and Instantiate the Builder
-
-First, require the package and create an instance by passing your Mongoose model to it.
+### JavaScript Example
 
 ```javascript
-const AggregateQueryBuilder = require('aggregate-query-builder');
-const MyModel = require('./models/myModel');
+const mongoose = require("mongoose");
+const AggregateQueryBuilder = require("@selieshjks/aggregate-query-builder");
 
-// Create an instance of the query builder
-const queryBuilder = new AggregateQueryBuilder(MyModel);
+const model = mongoose.model("User", new mongoose.Schema({
+  name: String,
+  age: Number,
+  city: String,
+  friendId: { type: mongoose.Schema.Types.ObjectId, ref: "Friend" }
+}));
+
+const builder = new AggregateQueryBuilder(model);
+
+// Create sub-pipelines
+builder.matchEqual("age", { $gte: 30 }, "ageFilter");
+builder.matchEqual("city", "New York", "cityFilter");
+
+// Use sub-pipelines in matchIf
+builder.matchIf("ageFilter", "cityFilter", null);
+
+// Build and output the final pipeline
+const pipeline = builder.build();
+
+console.log(JSON.stringify(pipeline, null, 2));
 ```
 
-### 2. Add Stages to the Pipeline
+### TypeScript Example
 
-The builder provides various methods to add different aggregation stages. You can add stages to either the main pipeline or sub-pipelines.
+```typescript
+import mongoose, { Model } from "mongoose";
+import AggregateQueryBuilder from "@selieshjks/aggregate-query-builder";
 
-#### Match Stages
+const model: Model<any> = mongoose.model(
+  "User",
+  new mongoose.Schema({
+    name: String,
+    age: Number,
+    city: String,
+    friendId: { type: mongoose.Schema.Types.ObjectId, ref: "Friend" },
+  })
+);
 
-- **Match by equality**:
-  ```javascript
-  queryBuilder.matchEqual('status', 'active');
-  ```
+const builder = new AggregateQueryBuilder(model);
 
-- **Match with a range condition**:
-  ```javascript
-  queryBuilder.matchRange('age', '$gte', 18);
-  ```
+// Define sub-pipelines
+builder.matchEqual("age", { $gte: 30 }, "ageFilter");
+builder.matchEqual("city", "New York", "cityFilter");
 
-- **Match less than**:
-  ```javascript
-  queryBuilder.matchLessThan('age', 30);
-  ```
+// Use sub-pipelines in conditional match
+builder.matchIf("ageFilter", "cityFilter", null);
 
-- **Match greater than**:
-  ```javascript
-  queryBuilder.matchGreaterThan('age', 50);
-  ```
+// Build the pipeline and log it
+const pipeline = builder.build();
+console.log(JSON.stringify(pipeline, null, 2));
+```
 
-- **Conditional match (`$cond`)**:
-  ```javascript
-  queryBuilder.matchIf(
-    { $gt: ['$age', 18] },  // Condition
-    { status: 'adult' },    // If true
-    { status: 'minor' }     // If false
-  );
-  ```
+## API Methods
 
-- **Switch condition (`$switch`)**:
-  ```javascript
-  queryBuilder.matchSwitch(
-    'age',
-    [
-      { caseCondition: { $lt: [ '$age', 18 ] }, then: 'minor' },
-      { caseCondition: { $gte: [ '$age', 18 ] }, then: 'adult' }
-    ]
-  );
-  ```
+### matchEqual(field, value, isSubPipeline = false)
+- Adds a `$match` stage for equality condition.
+- **Parameters**:
+  - `field`: The field to match.
+  - `value`: The value to match against.
+  - `isSubPipeline`: If `true`, the match is added to a sub-pipeline.
+  
+### matchRange(field, operator, value, isSubPipeline = false)
+- Adds a `$match` stage for range conditions (e.g., `$gt`, `$lt`).
+- **Parameters**:
+  - `field`: The field to match.
+  - `operator`: The operator (e.g., `$gt`, `$lt`).
+  - `value`: The value to compare.
+  - `isSubPipeline`: If `true`, the match is added to a sub-pipeline.
 
-#### Sub-pipeline Support
+### matchIf(condition, trueMatch, falseMatch, isSubPipeline = false)
+- Adds a `$match` stage with conditional logic.
+- **Parameters**:
+  - `condition`: The condition to evaluate.
+  - `trueMatch`: The match stage if the condition is `true`.
+  - `falseMatch`: The match stage if the condition is `false`.
+  - `isSubPipeline`: If `true`, the match is added to a sub-pipeline.
 
-Add stages to sub-pipelines by setting `isSubPipeline = true`. You can provide a custom name or let it be autogenerated.
+### matchSwitch(switchField, cases, isSubPipeline = false)
+- Adds a `$match` stage with a `switch` condition.
+- **Parameters**:
+  - `switchField`: The field to evaluate.
+  - `cases`: The cases for the switch.
+  - `isSubPipeline`: If `true`, the match is added to a sub-pipeline.
+
+### lookup(fields, isSubPipeline = false)
+- Adds `$lookup` stages based on Mongoose schema references.
+- **Parameters**:
+  - `fields`: The fields to lookup.
+  - `isSubPipeline`: If `true`, the lookup is added to a sub-pipeline.
+
+### unwind(fields, isSubPipeline = false)
+- Adds `$unwind` stages to deconstruct arrays.
+- **Parameters**:
+  - `fields`: The fields to unwind.
+  - `isSubPipeline`: If `true`, the unwind is added to a sub-pipeline.
+
+### group(groupConditions, isSubPipeline = false)
+- Adds a `$group` stage to group documents.
+- **Parameters**:
+  - `groupConditions`: The conditions for grouping.
+  - `isSubPipeline`: If `true`, the group is added to a sub-pipeline.
+
+### project(fields, isSubPipeline = false)
+- Adds a `$project` stage to specify fields to include or exclude.
+- **Parameters**:
+  - `fields`: The fields to include or exclude.
+  - `isSubPipeline`: If `true`, the project is added to a sub-pipeline.
+
+### sort(sortConditions, isSubPipeline = false)
+- Adds a `$sort` stage to sort documents.
+- **Parameters**:
+  - `sortConditions`: The sort conditions.
+  - `isSubPipeline`: If `true`, the sort is added to a sub-pipeline.
+
+### skip(skipValue, isSubPipeline = false)
+- Adds a `$skip` stage for pagination.
+- **Parameters**:
+  - `skipValue`: The number of documents to skip.
+  - `isSubPipeline`: If `true`, the skip is added to a sub-pipeline.
+
+### limit(limitValue, isSubPipeline = false)
+- Adds a `$limit` stage for pagination.
+- **Parameters**:
+  - `limitValue`: The maximum number of documents to return.
+  - `isSubPipeline`: If `true`, the limit is added to a sub-pipeline.
+
+### facet(facets, isSubPipeline = false)
+- Adds a `$facet` stage to run multiple aggregations in parallel.
+- **Parameters**:
+  - `facets`: The facets to include.
+  - `isSubPipeline`: If `true`, the facet is added to a sub-pipeline.
+
+### appendSubPipeline()
+- Appends the sub-pipeline to the main pipeline.
+- Clears the sub-pipeline after appending.
+
+### build()
+- Builds the final aggregation pipeline.
+
+## Example: Using Sub-Pipelines
+
+Here’s a more complex example showing how to use sub-pipelines effectively:
 
 ```javascript
-// Add match to the sub-pipeline with default name
-queryBuilder.matchEqual('age', 30, true);
+const builder = new AggregateQueryBuilder(model);
 
-// Add match to the sub-pipeline with custom name
-queryBuilder.matchEqual('age', 40, true, 'customSubPipeline');
+// Create sub-pipelines
+builder.matchEqual("age", { $gte: 30 }, "ageFilter");
+builder.matchEqual("city", "New York", "cityFilter");
+builder.matchEqual("height",{$lte: 160}, "heightFilter");
+
+// Use sub-pipelines in a matchIf stage
+builder.matchIf("ageFilter", "cityFilter", "heightFilter");
+
+// Append the sub-pipeline and build the final pipeline
+builder.appendSubPipeline();
+const pipeline = builder.build();
+
+console.log(JSON.stringify(pipeline, null, 2));
 ```
 
-#### Sub-pipeline Handling
+## Contribution
 
-- **Append sub-pipeline to the main pipeline**:
-  ```javascript
-  queryBuilder.appendSubPipeline();
-  ```
-
-- **Retrieve and remove a sub-pipeline by key**:
-  ```javascript
-  const subPipeline = queryBuilder.getSubPipelineByKey('customSubPipeline');
-  ```
-
-#### Other Stages
-
-- **Lookup**: Perform `$lookup` to join other collections.
-  ```javascript
-  queryBuilder.lookup(['user'], true); // Automatically fetch reference
-  ```
-
-- **Unwind**: Flatten arrays from `$lookup` results.
-  ```javascript
-  queryBuilder.unwind(['user'], true);
-  ```
-
-- **Group**: Group documents and perform aggregation.
-  ```javascript
-  queryBuilder.group({ _id: '$status', total: { $sum: 1 } });
-  ```
-
-- **Project**: Specify fields to include/exclude.
-  ```javascript
-  queryBuilder.project({ name: 1, age: 1 });
-  ```
-
-- **Sort**: Sort documents.
-  ```javascript
-  queryBuilder.sort({ age: 1 });
-  ```
-
-- **Skip**: For pagination.
-  ```javascript
-  queryBuilder.skip(10);
-  ```
-
-- **Limit**: For pagination.
-  ```javascript
-  queryBuilder.limit(20);
-  ```
-
-- **Facet**: Run multiple aggregations in parallel.
-  ```javascript
-  queryBuilder.facet({ status: [{ $match: { status: 'active' } }] });
-  ```
-
-### 3. Build the Final Pipeline
-
-Once all stages are added, build the final aggregation pipeline:
-
-```javascript
-const pipeline = queryBuilder.build();
-```
-
-You can then pass this pipeline to Mongoose's `aggregate()` method.
-
-### Example
-
-```javascript
-const queryBuilder = new AggregateQueryBuilder(MyModel);
-
-// Build aggregation pipeline
-queryBuilder
-  .matchEqual('status', 'active')
-  .matchGreaterThan('age', 18)
-  .lookup(['user'], true)
-  .unwind(['user'], true)
-  .group({ _id: '$status', total: { $sum: 1 } })
-  .appendSubPipeline();
-
-// Final pipeline
-const pipeline = queryBuilder.build();
-
-// Use the pipeline with Mongoose
-MyModel.aggregate(pipeline)
-  .then(results => console.log(results))
-  .catch(err => console.error(err));
-```
-
-### Methods Overview
-
-- **`matchEqual(field, value, isSubPipeline, name)`**: Adds a `$match` stage with equality condition.
-- **`matchRange(field, operator, value, isSubPipeline, name)`**: Adds a `$match` stage with a range condition.
-- **`matchLessThan(field, value, isSubPipeline, name)`**: Adds a `$match` stage with a less than condition.
-- **`matchGreaterThan(field, value, isSubPipeline, name)`**: Adds a `$match` stage with a greater than condition.
-- **`matchIf(condition, trueMatch, falseMatch, isSubPipeline, name)`**: Adds a conditional `$match` stage.
-- **`matchSwitch(switchField, cases, isSubPipeline, name)`**: Adds a `$match` stage with a switch condition.
-- **`lookup(fields, isSubPipeline, name)`**: Adds a `$lookup` stage to join other collections.
-- **`unwind(fields, isSubPipeline, name)`**: Adds a `$unwind` stage to flatten arrays.
-- **`group(groupConditions, isSubPipeline, name)`**: Adds a `$group` stage to group documents.
-- **`project(fields, isSubPipeline, name)`**: Adds a `$project` stage to include/exclude fields.
-- **`sort(sortConditions, isSubPipeline, name)`**: Adds a `$sort` stage.
-- **`skip(skipValue, isSubPipeline, name)`**: Adds a `$skip` stage for pagination.
-- **`limit(limitValue, isSubPipeline, name)`**: Adds a `$limit` stage for pagination.
-- **`facet(facets, isSubPipeline, name)`**: Adds a `$facet` stage to run multiple aggregations.
-- **`appendSubPipeline()`**: Appends all sub-pipelines to the main pipeline.
-- **`getSubPipelineByKey(key)`**: Retrieves and removes a sub-pipeline by its key.
+If you’d like to contribute, feel free to fork the repo, open an issue, or submit a pull request. Contributions are always welcome!
 
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## GitHub Repository
+
+Check out the project on GitHub: [Aggregate Query Builder GitHub](https://github.com/selieshjks/aggregate-query-builder)
+
+## npm Package
+
+Install from npm: [@selieshjks/aggregate-query-builder](https://www.npmjs.com/package/@selieshjks/aggregate-query-builder)
+
