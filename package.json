@@ -1,0 +1,20 @@
+{
+    "name": "aggregate-query-bulder",
+    "version": "1.0.0",
+    "description": "A MongoDB aggregation query builder for Mongoose models",
+    "main": "src/aggregateQueryBuilder.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [
+        "mongodb",
+        "mongoose",
+        "aggregation",
+        "query-builder"
+    ],
+    "author": "Seliesh Jacob",
+    "license": "MIT",
+    "dependencies": {
+        "mongoose": "^6.0.0"
+    }
+}

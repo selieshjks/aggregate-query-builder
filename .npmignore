@@ -1,0 +1,32 @@
+# Ignore test files and directories
+test/
+tests/
+spec/
+
+# Ignore local development files
+*.log
+*.env
+.env*
+
+# Ignore build artifacts and temporary files
+*.tsbuildinfo
+*.swp
+*.bak
+*.tmp
+
+# Ignore IDE or editor-specific files and directories
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Ignore node_modules folder (should already be excluded by default)
+node_modules/
+
+# Ignore other directories/files you don't want to include in your npm package
+docs/
+coverage/
+*.iml
+
+# Ignore the package-lock.json (if not needed)
+package-lock.json

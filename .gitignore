@@ -1,0 +1,37 @@
+# Node.js dependencies
+node_modules/
+
+# npm package lock file
+package-lock.json
+
+# Build directories
+/dist
+/build
+/tmp
+
+# Log files
+*.log
+*.log.*
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# OS-specific files
+.DS_Store       # macOS
+Thumbs.db       # Windows
+
+# IDE/editor specific files
+.idea/          # JetBrains IDEs (e.g., WebStorm, IntelliJ)
+.vscode/         # Visual Studio Code
+*.sublime-project
+*.sublime-workspace
+
+# Operating system files
+*.swp           # vim swap files
+*.swo           # vim backup files
+*.bak           # Backup files
+*.tmp           # Temporary files
+
+# Coverage directory for code cove
