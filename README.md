@@ -8,7 +8,7 @@ A simple and flexible query builder for MongoDB aggregation using Mongoose. This
 To install the package, run the following command:
 
 ```bash
-npm install aggregate-query-builder
+npm install @selieshjks/aggregate-query-bulder
 ```
 
 ## Usage
