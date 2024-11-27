@@ -1,10 +1,12 @@
-import { Model, Schema, Types } from 'mongoose';
+import mongoose, { Model, PipelineStage } from 'mongoose';
 
-type SubPipeline = Record<string, object[]>;
+interface SubPipeline {
+    [key: string]: PipelineStage[];
+}
 
 class AggregateQueryBuilder {
     private model: Model<any>;
-    private pipeline: object[];
+    private pipeline: PipelineStage[];
     private subPipeline: SubPipeline;
     private subPipelineCounter: number;
 
@@ -15,150 +17,176 @@ class AggregateQueryBuilder {
         this.subPipelineCounter = 0;
     }
 
-    // Generate a default name for unnamed sub-pipelines
-    private generateDefaultSubPipelineName(): string {
-        return `subPipeline_${this.subPipelineCounter++}`;
-    }
-
     // Match stage: Apply equality condition
-    matchEqual(field: string, value: any, isSubPipeline: boolean = false, subPipelineName?: string): this {
-        const matchStage = { $match: { [field]: value } };
-        const pipelineName = subPipelineName || this.generateDefaultSubPipelineName();
-
-        if (isSubPipeline) {
-            if (!this.subPipeline[pipelineName]) this.subPipeline[pipelineName] = [];
-            this.subPipeline[pipelineName].push(matchStage);
-        } else {
-            this.pipeline.push(matchStage);
-        }
-
+    matchEqual(field: string, value: any, subPipelineName?: string): this {
+        const matchStage: PipelineStage.Match = { $match: { [field]: value } };
+        this.addToPipeline(matchStage, subPipelineName);
         return this;
     }
 
     // Match stage: Apply range condition (greater than, less than, etc.)
-    matchRange(field: string, operator: string, value: any, isSubPipeline: boolean = false, subPipelineName?: string): this {
-        const rangeCondition = { [field]: { [operator]: value } };
-        const matchStage = { $match: rangeCondition };
-        const pipelineName = subPipelineName || this.generateDefaultSubPipelineName();
-
-        if (isSubPipeline) {
-            if (!this.subPipeline[pipelineName]) this.subPipeline[pipelineName] = [];
-            this.subPipeline[pipelineName].push(matchStage);
-        } else {
-            this.pipeline.push(matchStage);
-        }
-
+    matchRange(field: string, operator: string, value: any, subPipelineName?: string): this {
+        const matchStage: PipelineStage.Match = { $match: { [field]: { [operator]: value } } };
+        this.addToPipeline(matchStage, subPipelineName);
         return this;
     }
 
-    // Match stage: Apply conditional match based on a condition
-    matchIf(condition: object, truePipeline: string, falsePipeline: string, isSubPipeline: boolean = false, subPipelineName?: string): this {
-        const trueStage = this.subPipeline[truePipeline];
-        const falseStage = this.subPipeline[falsePipeline];
+    // Match stage: Apply less than condition
+    matchLessThan(field: string, value: any, subPipelineName?: string): this {
+        return this.matchRange(field, '$lt', value, subPipelineName);
+    }
 
-        if (!trueStage || !falseStage) {
-            throw new Error('Sub-pipeline names for true and false conditions must exist.');
+    // Match stage: Apply greater than condition
+    matchGreaterThan(field: string, value: any, subPipelineName?: string): this {
+        return this.matchRange(field, '$gt', value, subPipelineName);
+    }
+
+    // Match stage: Apply conditional match, accepting subPipeline names
+    matchIf(
+        conditionPipelineName: string,
+        trueMatchPipelineName: string,
+        falseMatchPipelineName: string,
+        subPipelineName?: string
+    ): this {
+        const condition = this.getAndRemoveSubPipeline(conditionPipelineName);
+        const trueMatch = this.getAndRemoveSubPipeline(trueMatchPipelineName);
+        const falseMatch = this.getAndRemoveSubPipeline(falseMatchPipelineName);
+
+        if (!condition || !trueMatch || !falseMatch) {
+            throw new Error(
+                `One or more sub-pipelines not found: ${conditionPipelineName}, ${trueMatchPipelineName}, ${falseMatchPipelineName}`
+            );
         }
 
-        const condStage = {
+        const condStage: PipelineStage.Match = {
             $match: {
-                $cond: {
-                    if: condition,
-                    then: trueStage,
-                    else: falseStage,
+                $expr: {
+                    $cond: {
+                        if: { $and: condition },
+                        then: { $and: trueMatch },
+                        else: { $and: falseMatch },
+                    },
                 },
             },
         };
 
-        const pipelineName = subPipelineName || this.generateDefaultSubPipelineName();
-
-        if (isSubPipeline) {
-            if (!this.subPipeline[pipelineName]) this.subPipeline[pipelineName] = [];
-            this.subPipeline[pipelineName].push(condStage);
-        } else {
-            this.pipeline.push(condStage);
-        }
-
+        this.addToPipeline(condStage, subPipelineName);
         return this;
     }
 
-    // Lookup stage: Automatically fetch reference collections based on model schema
-    async lookup(fields: string[], isSubPipeline: boolean = false, subPipelineName?: string): Promise<this> {
-        if (Array.isArray(fields)) {
-            for (const field of fields) {
-                const schema = this.model.schema.path(field) as any;
+    // Lookup stage: Fetch reference collections
+    async lookup(fields: string[], subPipelineName?: string): Promise<this> {
+        for (const field of fields) {
+            const schema = this.model.schema.path(field) as any;
+            if (schema?.options?.ref) {
+                const refModel = mongoose.model(schema.options.ref);
+                const from = refModel.collection.collectionName;
+                const localField = field;
+                const foreignField = '_id';
+                const as = `${field}Details`;
 
-                if (schema && schema.options && schema.options.ref) {
-                    const refModel = this.model.db.model(schema.options.ref);
-                    const from = refModel.collection.collectionName;
-                    const localField = field;
-                    const foreignField = '_id';
-                    const as = `${field}Details`;
+                const lookupStage: PipelineStage.Lookup = {
+                    $lookup: {
+                        from,
+                        localField,
+                        foreignField,
+                        as,
+                    },
+                };
 
-                    const lookupStage = {
-                        $lookup: {
-                            from,
-                            localField,
-                            foreignField,
-                            as,
-                        },
-                    };
-
-                    const pipelineName = subPipelineName || this.generateDefaultSubPipelineName();
-
-                    if (isSubPipeline) {
-                        if (!this.subPipeline[pipelineName]) this.subPipeline[pipelineName] = [];
-                        this.subPipeline[pipelineName].push(lookupStage);
-                    } else {
-                        this.pipeline.push(lookupStage);
-                    }
-                }
+                this.addToPipeline(lookupStage, subPipelineName);
             }
         }
         return this;
     }
 
-    // Append sub-pipeline stages to the main pipeline
-    appendSubPipeline(subPipelineName?: string): this {
-        const pipelineName = subPipelineName || this.generateDefaultSubPipelineName();
-        const subPipeline = this.subPipeline[pipelineName];
-
-        if (subPipeline) {
-            this.pipeline.push(...subPipeline);
-            delete this.subPipeline[pipelineName];
-        }
-
+    // Unwind stage: Deconstruct arrays
+    unwind(fields: string[], subPipelineName?: string): this {
+        fields.forEach((field) => {
+            const unwindStage: PipelineStage.Unwind = { $unwind: `$${field}Details` };
+            this.addToPipeline(unwindStage, subPipelineName);
+        });
         return this;
     }
 
-    // Retrieve a sub-pipeline by name
-    getSubPipeline(subPipelineName: string): object[] | null {
-        const subPipeline = this.subPipeline[subPipelineName];
-        if (subPipeline) {
-            delete this.subPipeline[subPipelineName];
-            return subPipeline;
-        }
-        return null;
+    // Group stage: Group documents
+    group(groupConditions: any, subPipelineName?: string): this {
+        const groupStage: PipelineStage.Group = { $group: groupConditions };
+        this.addToPipeline(groupStage, subPipelineName);
+        return this;
     }
 
-    // Group stage: Group documents and compute aggregate values
-    group(groupConditions: object, isSubPipeline: boolean = false, subPipelineName?: string): this {
-        const groupStage = { $group: groupConditions };
-        const pipelineName = subPipelineName || this.generateDefaultSubPipelineName();
+    // Project stage: Specify fields
+    project(fields: any, subPipelineName?: string): this {
+        const projectStage: PipelineStage.Project = { $project: fields };
+        this.addToPipeline(projectStage, subPipelineName);
+        return this;
+    }
 
-        if (isSubPipeline) {
-            if (!this.subPipeline[pipelineName]) this.subPipeline[pipelineName] = [];
-            this.subPipeline[pipelineName].push(groupStage);
+    // Sort stage: Sort documents
+    sort(sortConditions: any, subPipelineName?: string): this {
+        const sortStage: PipelineStage.Sort = { $sort: sortConditions };
+        this.addToPipeline(sortStage, subPipelineName);
+        return this;
+    }
+
+    // Skip stage: Skip documents
+    skip(skipValue: number, subPipelineName?: string): this {
+        const skipStage: PipelineStage.Skip = { $skip: skipValue };
+        this.addToPipeline(skipStage, subPipelineName);
+        return this;
+    }
+
+    // Limit stage: Limit documents
+    limit(limitValue: number, subPipelineName?: string): this {
+        const limitStage: PipelineStage.Limit = { $limit: limitValue };
+        this.addToPipeline(limitStage, subPipelineName);
+        return this;
+    }
+
+    // Facet stage: Run multiple aggregations
+    facet(facets: any, subPipelineName?: string): this {
+        const facetStage: PipelineStage.Facet = { $facet: facets };
+        this.addToPipeline(facetStage, subPipelineName);
+        return this;
+    }
+
+    // Append sub-pipeline to main pipeline
+    appendSubPipeline(name: string): this {
+        if (this.subPipeline[name]) {
+            this.pipeline.push(...this.subPipeline[name]);
+            delete this.subPipeline[name];
+        }
+        return this;
+    }
+
+    // Retrieve and remove a sub-pipeline by key
+    getAndRemoveSubPipeline(name: string): PipelineStage[] | null {
+        const sub = this.subPipeline[name] || null;
+        if (sub) delete this.subPipeline[name];
+        return sub;
+    }
+
+    // Add stage to appropriate pipeline
+    private addToPipeline(stage: PipelineStage, subPipelineName?: string): void {
+        if (subPipelineName) {
+            if (!this.subPipeline[subPipelineName]) {
+                this.subPipeline[subPipelineName] = [];
+            }
+            this.subPipeline[subPipelineName].push(stage);
         } else {
-            this.pipeline.push(groupStage);
+            this.pipeline.push(stage);
         }
-
-        return this;
     }
 
     // Build the final pipeline
-    build(): object[] {
+    build(): PipelineStage[] {
         return this.pipeline;
+    }
+
+    // Generate default name for unnamed sub-pipelines
+    private generateDefaultSubPipelineName(): string {
+        return `subPipeline_${++this.subPipelineCounter}`;
     }
 }
 
