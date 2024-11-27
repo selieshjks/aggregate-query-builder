@@ -1,11 +1,13 @@
 {
     "name": "@selieshjks/aggregate-query-bulder",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "description": "A MongoDB aggregation query builder for Mongoose models",
-    "main": "src/aggregateQueryBuilder.js",
-    "types": "src/aggregateQueryBuilder.d.ts",
+    "main": "dist/aggregateQueryBuilder.js",
+    "types": "dist/aggregateQueryBuilder.d.ts",
     "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "build": "tsc",
+        "test": "echo \"No test specified\" && exit 1",
+        "prepare": "npm run build"
     },
     "keywords": [
         "mongodb",
@@ -22,5 +24,8 @@
         "type": "git",
         "url": "git+https://github.com/selieshjks/aggregate-query-builder.git"
     },
-    "homepage": "https://github.com/selieshjks/aggregate-query-builder.git#readme"
+    "homepage": "https://github.com/selieshjks/aggregate-query-builder.git#readme",
+    "devDependencies": {
+        "typescript": "^5.7.2"
+    }
 }
