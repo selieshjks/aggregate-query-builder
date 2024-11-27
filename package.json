@@ -16,5 +16,8 @@
     "license": "MIT",
     "dependencies": {
         "mongoose": "^6.0.0"
+    },
+    "publishConfig": {
+        "registry": "https://npm.pkg.github.com"
     }
 }
