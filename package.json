@@ -1,5 +1,5 @@
 {
-    "name": "aggregate-query-bulder",
+    "name": "@selieshjks/aggregate-query-bulder",
     "version": "1.0.0",
     "description": "A MongoDB aggregation query builder for Mongoose models",
     "main": "src/aggregateQueryBuilder.js",
