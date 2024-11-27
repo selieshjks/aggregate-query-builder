@@ -18,6 +18,12 @@
         "mongoose": "^6.0.0"
     },
     "publishConfig": {
-        "registry": "https://npm.pkg.github.com"
-    }
+        "registry": "https://npm.pkg.github.com",
+        "access": "public"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/selieshjks/aggregate-query-builder.git"
+    },
+    "homepage": "https://github.com/selieshjks/aggregate-query-builder.git#readme"
 }
