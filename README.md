@@ -43,9 +43,10 @@ const builder = new AggregateQueryBuilder(model);
 // Create sub-pipelines
 builder.matchEqual("age", { $gte: 30 }, "ageFilter");
 builder.matchEqual("city", "New York", "cityFilter");
+builder.matchEqual("height",{$lte: 160}, "heightFilter");
 
 // Use sub-pipelines in matchIf
-builder.matchIf("ageFilter", "cityFilter", null);
+builder.matchIf("ageFilter", "cityFilter", "heightFilter");
 
 // Build and output the final pipeline
 const pipeline = builder.build();
@@ -74,9 +75,10 @@ const builder = new AggregateQueryBuilder(model);
 // Define sub-pipelines
 builder.matchEqual("age", { $gte: 30 }, "ageFilter");
 builder.matchEqual("city", "New York", "cityFilter");
+builder.matchEqual("height",{$lte: 160}, "heightFilter");
 
 // Use sub-pipelines in conditional match
-builder.matchIf("ageFilter", "cityFilter", null);
+builder.matchIf("ageFilter", "cityFilter", "heightFilter");
 
 // Build the pipeline and log it
 const pipeline = builder.build();
